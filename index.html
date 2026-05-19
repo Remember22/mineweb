@@ -311,6 +311,24 @@
     .ctrl-btn.screenshot { background: #b06c2e; }
     .ctrl-btn.share { background: #1f7a5c; }
 
+    /* ====== BOTÕES COMPACTOS EM MOBILE ====== */
+    @media (max-width: 600px) {
+      #controls { gap: 5px; bottom: 10px; }
+      .ctrl-btn { font-size: 9px; padding: 10px 8px; letter-spacing: 0; }
+      .btn-text { display: none; }
+      #group-btn { font-size: 8px; padding: 6px 9px; }
+    }
+    @media (max-width: 380px) {
+      #controls {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        width: calc(100vw - 16px);
+        max-width: none;
+        gap: 4px;
+      }
+      .ctrl-btn { text-align: center; padding: 10px 4px; }
+    }
+
     #orientation-hint {
       position: fixed; bottom: 90px; left: 50%;
       transform: translateX(-50%);
@@ -455,12 +473,12 @@
   <button id="group-btn" aria-label="Ver integrantes do grupo">👥 GRUPO</button>
 
   <div id="controls" role="toolbar" aria-label="Controles do mundo">
-    <button class="ctrl-btn reset" id="resetBtn" aria-label="Reiniciar mundo">↻ REINICIAR</button>
-    <button class="ctrl-btn night" id="nightBtn" aria-label="Alternar entre dia e noite">☾ NOITE</button>
-    <button class="ctrl-btn mode"  id="modeBtn" aria-label="Modo de exibição (tela ou mesa)">📺 TELA</button>
-    <button class="ctrl-btn camera" id="cameraBtn" aria-label="Alternar câmera frontal/traseira">📷 CÂMERA</button>
-    <button class="ctrl-btn screenshot" id="screenshotBtn" aria-label="Capturar tela do mundo">📸 FOTO</button>
-    <button class="ctrl-btn share" id="shareBtn" aria-label="Compartilhar captura">📤 COMPARTILHAR</button>
+    <button class="ctrl-btn reset" id="resetBtn" aria-label="Reiniciar mundo">↻ <span class="btn-text">REINICIAR</span></button>
+    <button class="ctrl-btn night" id="nightBtn" aria-label="Alternar entre dia e noite">☾ <span class="btn-text">NOITE</span></button>
+    <button class="ctrl-btn mode"  id="modeBtn" aria-label="Modo de exibição (tela ou mesa)">📺 <span class="btn-text">TELA</span></button>
+    <button class="ctrl-btn camera" id="cameraBtn" aria-label="Alternar câmera frontal/traseira">📷 <span class="btn-text">CÂMERA</span></button>
+    <button class="ctrl-btn screenshot" id="screenshotBtn" aria-label="Capturar tela do mundo">📸 <span class="btn-text">FOTO</span></button>
+    <button class="ctrl-btn share" id="shareBtn" aria-label="Compartilhar captura">📤 <span class="btn-text">COMPARTILHAR</span></button>
   </div>
 
   <div id="orientation-hint">📱 Vire o dispositivo para paisagem</div>
@@ -486,9 +504,7 @@
     embedded
     arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; trackingMethod: best;"
     renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true; precision: medium; colorManagement: true;"
-    vr-mode-ui="enabled: false"
-    cursor="rayOrigin: mouse"
-    raycaster="objects: .clickable; near: 0.01; far: 100;">
+    vr-mode-ui="enabled: false">
 
     <a-marker preset="hiro" id="marker" emitevents="true">
 
@@ -781,7 +797,7 @@
         }
 
         buildTree(BLOCK * 1.5, BLOCK * 2.5, -BLOCK * 1);
-        buildCow(-BLOCK * 1.4, BLOCK * 2.3, BLOCK * 1.2);
+        buildCow(-BLOCK * 1.4, BLOCK * 2.9, BLOCK * 1.2);
         buildTorch(BLOCK * 1.5, BLOCK * 2.3, BLOCK * 1.5);
         buildFlowers();
         buildStoneCluster(-BLOCK * 1.8, BLOCK * 2.5, -BLOCK * 1.5);
@@ -938,7 +954,7 @@
           sun.setAttribute('intensity', '0.4');
           sphere.setAttribute('color', '#e8edf5');
           sphere.setAttribute('material', 'emissive: #aabbdd; emissiveIntensity: 0.9; shader: standard;');
-          $nightBtn.innerHTML = '☀ DIA';
+          $nightBtn.innerHTML = '☀ <span class="btn-text">DIA</span>';
           toast('☾ Caiu a noite');
         } else {
           ambient.setAttribute('color', '#9aa7b5');
@@ -947,7 +963,7 @@
           sun.setAttribute('intensity', '1.1');
           sphere.setAttribute('color', '#ffe066');
           sphere.setAttribute('material', 'emissive: #ffaa00; emissiveIntensity: 0.85; shader: standard;');
-          $nightBtn.innerHTML = '☾ NOITE';
+          $nightBtn.innerHTML = '☾ <span class="btn-text">NOITE</span>';
           toast('☀ Amanheceu');
         }
         sfx.switchMode();
@@ -958,11 +974,11 @@
         isScreenMode = !isScreenMode;
         if (isScreenMode) {
           $rotator.setAttribute('rotation', '-90 0 0');
-          $modeBtn.innerHTML = '📺 TELA';
+          $modeBtn.innerHTML = '📺 <span class="btn-text">TELA</span>';
           toast('Modo TELA (vertical)');
         } else {
           $rotator.setAttribute('rotation', '0 0 0');
-          $modeBtn.innerHTML = '🪑 MESA';
+          $modeBtn.innerHTML = '🪑 <span class="btn-text">MESA</span>';
           toast('Modo MESA (horizontal)');
         }
         sfx.switchMode();
@@ -985,7 +1001,9 @@
           videoEl.srcObject = stream;
           currentFacingMode = newMode;
           const label = newMode === 'environment' ? 'Traseira' : 'Frontal';
-          document.getElementById('cameraBtn').innerHTML = newMode === 'environment' ? '📷 CÂMERA' : '🤳 SELFIE';
+          document.getElementById('cameraBtn').innerHTML = newMode === 'environment'
+            ? '📷 <span class="btn-text">CÂMERA</span>'
+            : '🤳 <span class="btn-text">SELFIE</span>';
           toast(`Câmera: ${label}`);
           sfx.switchMode();
         } catch (err) {
@@ -1087,6 +1105,83 @@
         }, 400);
       }
 
+      /* ========== RAYCASTER CUSTOMIZADO (touch + mouse) ========== */
+      // Resolve: offset de toque no celular e detecção de filhos da vaca
+      function setupCustomRaycaster() {
+        const scene = document.querySelector('a-scene');
+        if (!scene) return;
+
+        function getCanvasNDC(event) {
+          const canvas = scene.canvas;
+          if (!canvas) return null;
+          const rect = canvas.getBoundingClientRect();
+          let clientX, clientY;
+          if (event.changedTouches && event.changedTouches.length > 0) {
+            clientX = event.changedTouches[0].clientX;
+            clientY = event.changedTouches[0].clientY;
+          } else {
+            clientX = event.clientX;
+            clientY = event.clientY;
+          }
+          return {
+            x: ((clientX - rect.left) / rect.width) * 2 - 1,
+            y: -((clientY - rect.top) / rect.height) * 2 + 1
+          };
+        }
+
+        function hitTest(ndc) {
+          const camera = scene.camera;
+          if (!camera) return;
+
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), camera);
+
+          // Mapeia cada mesh ao seu elemento .clickable mais próximo na hierarquia
+          const meshes = [];
+          const meshToEl = new Map();
+          document.querySelectorAll('.clickable').forEach(el => {
+            if (!el.object3D) return;
+            el.object3D.traverse(child => {
+              if (child.isMesh) {
+                meshes.push(child);
+                meshToEl.set(child.uuid, el);
+              }
+            });
+          });
+
+          if (meshes.length === 0) return;
+          const hits = raycaster.intersectObjects(meshes, false);
+          if (hits.length > 0) {
+            const targetEl = meshToEl.get(hits[0].object.uuid);
+            if (targetEl) targetEl.emit('click', { intersection: hits[0] });
+          }
+        }
+
+        function attachListeners() {
+          const canvas = scene.canvas;
+          if (!canvas) { setTimeout(attachListeners, 300); return; }
+
+          // Touch: usa changedTouches para coordenadas precisas do canvas
+          canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const ndc = getCanvasNDC(e);
+            if (ndc) hitTest(ndc);
+          }, { passive: false });
+
+          // Mouse (desktop)
+          canvas.addEventListener('click', (e) => {
+            const ndc = getCanvasNDC(e);
+            if (ndc) hitTest(ndc);
+          });
+        }
+
+        if (scene.hasLoaded) {
+          attachListeners();
+        } else {
+          scene.addEventListener('loaded', attachListeners);
+        }
+      }
+
       /* ========== LISTENERS ========== */
       document.getElementById('startBtn').addEventListener('click', () => {
         document.getElementById('welcome').classList.add('hidden');
@@ -1120,6 +1215,8 @@
       });
 
       /* ====== Inicialização ====== */
+      setupCustomRaycaster();
+
       document.querySelector('a-scene').addEventListener('loaded', () => {
         buildTerrain();
         simulateLoading();
