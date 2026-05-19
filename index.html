@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a2e1a">
+  <title>Mini Mundo Voxel · WebAR</title>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- AR.js para A-Frame -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+  <!-- Fontes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-deep:   #0e1a14;
+      --bg-soft:   #1a2e1a;
+      --grass:     #5cb85c;
+      --grass-dk:  #3e8e3e;
+      --dirt:      #7c4a1e;
+      --wood:      #8b5a2b;
+      --leaf:      #2d7a2d;
+      --gold:      #ffd166;
+      --flame:     #ff8c1a;
+      --bone:      #f7f2dc;
+      --line:      rgba(247, 242, 220, 0.18);
+      --shadow:    0 4px 0 rgba(0,0,0,0.35);
+      --pixel-shadow: 4px 4px 0 #000;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      overflow: hidden;
+      background: var(--bg-deep);
+      font-family: 'VT323', 'Courier New', monospace;
+      color: var(--bone);
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* ====== TELA DE BOAS-VINDAS ====== */
+    #welcome {
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(92, 184, 92, 0.15), transparent 50%),
+        radial-gradient(circle at 70% 80%, rgba(255, 140, 26, 0.12), transparent 50%),
+        var(--bg-deep);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      text-align: center;
+      transition: opacity 0.6s ease;
+      overflow-y: auto;
+    }
+    #welcome.hidden { opacity: 0; pointer-events: none; }
+
+    #welcome::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(247,242,220,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(247,242,220,0.025) 1px, transparent 1px);
+      background-size: 16px 16px;
+      pointer-events: none;
+    }
+
+    .pixel-logo {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(14px, 4.5vw, 22px);
+      color: var(--gold);
+      text-shadow: var(--pixel-shadow);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+      line-height: 1.6;
+      position: relative; z-index: 1;
+    }
+    .pixel-logo span.green { color: var(--grass); display: block; margin-top: 6px; font-size: 0.7em; }
+
+    .subtitle {
+      font-size: 20px;
+      color: var(--bone);
+      opacity: 0.85;
+      margin: 8px 0 18px;
+      max-width: 360px;
+      position: relative; z-index: 1;
+    }
+
+    .marker-card {
+      background: var(--bg-soft);
+      border: 3px solid var(--bone);
+      box-shadow: var(--pixel-shadow);
+      padding: 14px;
+      margin: 10px 0 18px;
+      max-width: 260px;
+      position: relative; z-index: 1;
+    }
+
+    .marker-card .label {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--gold);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .marker-card img {
+      width: 130px; height: 130px;
+      display: block; margin: 0 auto;
+      image-rendering: pixelated;
+      background: #fff;
+      padding: 4px;
+    }
+
+    .marker-card .hint {
+      font-size: 17px;
+      margin-top: 10px;
+      opacity: 0.8;
+      line-height: 1.3;
+    }
+
+    .start-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      color: var(--bg-deep);
+      background: var(--gold);
+      border: none;
+      padding: 16px 28px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      box-shadow: var(--pixel-shadow);
+      transition: transform 0.1s;
+      position: relative;
+      z-index: 1;
+    }
+    .start-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #000;
+    }
+
+    /* ====== BLOCO DE CRÉDITOS NA TELA DE BOAS-VINDAS ====== */
+    .credits-box {
+      background: rgba(26, 46, 26, 0.6);
+      border: 2px solid var(--line);
+      padding: 12px 16px;
+      margin-top: 20px;
+      max-width: 320px;
+      position: relative; z-index: 1;
+    }
+    .credits-box .credits-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      color: var(--grass);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .credits-box .member {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 16px;
+      padding: 3px 0;
+      gap: 12px;
+    }
+    .credits-box .member .name { color: var(--bone); }
+    .credits-box .member .ra   { color: var(--gold); font-family: 'Press Start 2P', monospace; font-size: 9px; }
+
+    /* ====== HUD (durante AR) ====== */
+    #ui-top {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 998;
+      padding: 10px 14px;
+      background: linear-gradient(180deg, rgba(14, 26, 20, 0.85), transparent);
+      pointer-events: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hud-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--gold);
+      text-shadow: 2px 2px 0 #000;
+      letter-spacing: 1px;
+    }
+
+    .hud-status {
+      font-size: 16px;
+      padding: 4px 10px;
+      background: rgba(14, 26, 20, 0.7);
+      border: 2px solid var(--line);
+      color: var(--bone);
+    }
+    .hud-status.found { color: var(--grass); border-color: var(--grass); }
+
+    #hud-stats {
+      position: fixed;
+      top: 64px;
+      left: 12px;
+      z-index: 998;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .stat {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      color: var(--bone);
+      background: rgba(14, 26, 20, 0.78);
+      border: 2px solid var(--line);
+      padding: 8px 12px;
+      letter-spacing: 1px;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 110px;
+    }
+    .stat .icon { font-size: 14px; }
+    .stat .val { color: var(--gold); margin-left: auto; }
+
+    /* ====== BOTÃO GRUPO (canto superior direito durante AR) ====== */
+    #group-btn {
+      position: fixed;
+      top: 64px;
+      right: 12px;
+      z-index: 998;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      background: var(--bg-soft);
+      color: var(--gold);
+      border: 2px solid var(--gold);
+      padding: 8px 12px;
+      cursor: pointer;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+      pointer-events: auto;
+    }
+    #group-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+
+    /* ====== CONTROLES INFERIORES ====== */
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 998;
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: calc(100vw - 24px);
+    }
+
+    .ctrl-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      background: var(--bg-soft);
+      color: var(--bone);
+      border: 3px solid var(--bone);
+      padding: 12px 14px;
+      cursor: pointer;
+      box-shadow: var(--pixel-shadow);
+      transition: transform 0.08s;
+    }
+    .ctrl-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #000;
+    }
+    .ctrl-btn.night { background: #2a3f6e; }
+    .ctrl-btn.reset { background: var(--dirt); }
+    .ctrl-btn.mode  { background: #4a7c4a; }
+
+    /* ====== TOAST DE FEEDBACK ====== */
+    #toast {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: rgba(14, 26, 20, 0.92);
+      border: 3px solid var(--gold);
+      color: var(--gold);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      padding: 16px 22px;
+      letter-spacing: 1px;
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: var(--pixel-shadow);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      white-space: nowrap;
+    }
+    #toast.show { transform: translate(-50%, -50%) scale(1); }
+
+    /* ====== MODAL DE CRÉDITOS ====== */
+    #credits-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1001;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #credits-modal.show { display: flex; }
+    .credits-panel {
+      background: var(--bg-soft);
+      border: 3px solid var(--gold);
+      box-shadow: var(--pixel-shadow);
+      padding: 24px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+    }
+    .credits-panel h2 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      color: var(--gold);
+      letter-spacing: 1px;
+      margin: 0 0 6px;
+    }
+    .credits-panel .sub {
+      font-size: 16px;
+      opacity: 0.7;
+      margin-bottom: 16px;
+    }
+    .credits-panel .member {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+      padding: 6px 8px;
+      gap: 12px;
+      border-bottom: 1px dashed var(--line);
+    }
+    .credits-panel .member:last-of-type { border-bottom: none; }
+    .credits-panel .member .name { color: var(--bone); }
+    .credits-panel .member .ra { color: var(--gold); font-family: 'Press Start 2P', monospace; font-size: 10px; }
+
+    .credits-panel .course {
+      font-size: 14px;
+      opacity: 0.6;
+      margin-top: 14px;
+      line-height: 1.4;
+    }
+    .credits-panel .close-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: var(--bg-deep);
+      background: var(--gold);
+      border: none;
+      padding: 12px 22px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      box-shadow: 3px 3px 0 #000;
+      margin-top: 18px;
+    }
+    .credits-panel .close-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+
+    /* ====== ESCONDER UI PADRÃO DO A-FRAME ====== */
+    .a-enter-vr, .a-enter-ar, .a-orientation-modal { display: none !important; }
+
+    /* Esconder elementos AR enquanto na tela de boas-vindas */
+    #welcome:not(.hidden) ~ #ui-top,
+    #welcome:not(.hidden) ~ #hud-stats,
+    #welcome:not(.hidden) ~ #group-btn,
+    #welcome:not(.hidden) ~ #controls,
+    #welcome:not(.hidden) ~ a-scene { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ====== TELA DE BOAS-VINDAS ====== -->
+  <div id="welcome">
+    <div class="pixel-logo">
+      MINI MUNDO
+      <span class="green">VOXEL · AR</span>
+    </div>
+    <p class="subtitle">Experiência de Realidade Aumentada inspirada em mundos cúbicos.</p>
+
+    <div class="marker-card">
+      <div class="label">▸ MARCADOR HIRO</div>
+      <img src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/HIRO.jpg" alt="Marcador Hiro">
+      <div class="hint">Aponte a câmera para esta imagem<br/>(em outra tela ou impressa)</div>
+    </div>
+
+    <button class="start-btn" id="startBtn">▶ INICIAR</button>
+
+    <p style="font-size: 15px; opacity: 0.55; margin-top: 18px; max-width: 320px; position: relative; z-index: 1;">
+      Toque nos blocos para minerá-los · Toque na vaca para fazer carinho
+    </p>
+
+    <!-- Bloco de créditos -->
+    <div class="credits-box">
+      <div class="credits-title">▸ INTEGRANTES DO GRUPO</div>
+      <div class="member"><span class="name">Gabriel Innocêncio</span><span class="ra">202210634</span></div>
+      <div class="member"><span class="name">Jonathas Pereira dos Santos</span><span class="ra">202210434</span></div>
+      <div class="member"><span class="name">Bruno Rodrigues dos Santos</span><span class="ra">202210528</span></div>
+      <div class="member"><span class="name">Alafy Fernando Santos</span><span class="ra">202210118</span></div>
+    </div>
+  </div>
+
+  <!-- ====== HUD ====== -->
+  <div id="ui-top">
+    <div class="hud-title">⛏ MINI MUNDO VOXEL</div>
+    <div class="hud-status" id="status">⌛ Procurando marcador...</div>
+  </div>
+
+  <div id="hud-stats">
+    <div class="stat"><span class="icon">⛏</span> BLOCOS <span class="val" id="blocks">0</span></div>
+    <div class="stat"><span class="icon">🐄</span> CARINHOS <span class="val" id="pets">0</span></div>
+  </div>
+
+  <button id="group-btn">👥 GRUPO</button>
+
+  <div id="controls">
+    <button class="ctrl-btn reset" id="resetBtn">↻ REINICIAR</button>
+    <button class="ctrl-btn night" id="nightBtn">☾ NOITE</button>
+    <button class="ctrl-btn mode"  id="modeBtn">📺 TELA</button>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- ====== MODAL DE CRÉDITOS ====== -->
+  <div id="credits-modal">
+    <div class="credits-panel">
+      <h2>INTEGRANTES</h2>
+      <div class="sub">Grupo de Realidade Aumentada</div>
+      <div class="member"><span class="name">Gabriel Innocêncio</span><span class="ra">202210634</span></div>
+      <div class="member"><span class="name">Jonathas Pereira dos Santos</span><span class="ra">202210434</span></div>
+      <div class="member"><span class="name">Bruno Rodrigues dos Santos</span><span class="ra">202210528</span></div>
+      <div class="member"><span class="name">Alafy Fernando Santos</span><span class="ra">202210118</span></div>
+      <div class="course">A-Frame + AR.js · WebAR<br/>EEP · 2026</div>
+      <button class="close-btn" id="closeCreditsBtn">▶ FECHAR</button>
+    </div>
+  </div>
+
+  <!-- ====== CENA AR ====== -->
+  <a-scene
+    embedded
+    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; trackingMethod: best;"
+    renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true; precision: medium; colorManagement: true;"
+    vr-mode-ui="enabled: false"
+    cursor="rayOrigin: mouse"
+    raycaster="objects: .clickable; near: 0.01; far: 100;">
+
+    <a-marker preset="hiro" id="marker" emitevents="true">
+
+      <!-- =========================================================
+           CONTAINER DE ROTAÇÃO
+           - rotation="-90 0 0" (TELA): adequado para marcador
+             exibido em monitor vertical. O eixo +Y do mundo
+             (cima) passa a alinhar com o eixo -Z do marcador
+             (que é o "cima real" quando o marcador está em pé).
+           - rotation="0 0 0" (MESA): adequado para marcador
+             impresso e colocado deitado na mesa.
+           ========================================================= -->
+      <a-entity id="world-rotator" rotation="-90 0 0" position="0 0 0">
+
+        <!-- Iluminação base -->
+        <a-light id="ambient" type="ambient" color="#9aa7b5" intensity="0.65"></a-light>
+        <a-light id="sun" type="directional" color="#fff5d6" intensity="1.1"
+                 position="1.5 3 1"></a-light>
+
+        <!-- Sol visível -->
+        <a-sphere id="sun-sphere" position="1.2 1.8 0.6" radius="0.12"
+                  color="#ffe066"
+                  material="emissive: #ffaa00; emissiveIntensity: 0.85; shader: standard;">
+        </a-sphere>
+
+        <!-- Nuvens animadas -->
+        <a-entity position="-1 1.4 -0.3"
+                  animation="property: position; from: -1 1.4 -0.3; to: 1.3 1.4 -0.3; dur: 35000; loop: true; dir: alternate; easing: linear;">
+          <a-box width="0.45" height="0.14" depth="0.22" color="#fdfdfd" opacity="0.88"></a-box>
+          <a-box width="0.28" height="0.1" depth="0.16" position="0.18 0.06 0.04" color="#fdfdfd" opacity="0.88"></a-box>
+        </a-entity>
+
+        <a-entity position="0.7 1.55 0.4"
+                  animation="property: position; from: 0.7 1.55 0.4; to: -1.1 1.55 0.4; dur: 45000; loop: true; dir: alternate; easing: linear;">
+          <a-box width="0.55" height="0.16" depth="0.26" color="#fdfdfd" opacity="0.88"></a-box>
+          <a-box width="0.32" height="0.12" depth="0.18" position="-0.22 0.05 -0.05" color="#fdfdfd" opacity="0.88"></a-box>
+        </a-entity>
+
+        <!-- Container do mundo - terreno e estruturas são gerados aqui -->
+        <a-entity id="world"></a-entity>
+
+      </a-entity>
+
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <script>
+    /* =====================================================================
+       MINI MUNDO VOXEL · WebAR
+       Arquitetura:
+         - Geração procedural de terreno em grid (5x5)
+         - Componentes: árvore, vaca, tocha, blocos clicáveis
+         - Interação: mineração de blocos, carinho na vaca
+         - Estados: dia/noite, modo TELA/MESA, contadores, reset
+       Sobre a rotação:
+         O <a-entity id="world-rotator"> envolve toda a cena.
+         No modo TELA (-90° X) o mundo aparece em pé sobre um
+         marcador vertical (ex: monitor). No modo MESA (0°) o
+         mundo cresce para fora do marcador deitado.
+    ===================================================================== */
+
+    const BLOCK = 0.15;          // Lado de cada bloco (em metros do mundo AR)
+    const GRID = 5;              // Tamanho do terreno (GRID x GRID)
+    const HALF = Math.floor(GRID / 2);
+
+    /* Paleta voxel: cada tipo de bloco tem cor própria. */
+    const PALETTE = {
+      grass:  '#5cb85c',
+      dirt:   '#7c4a1e',
+      stone:  '#9aa0a8',
+      wood:   '#8b5a2b',
+      leaves: '#3a9d3a',
+      sand:   '#e6d49e',
+      flower: '#ff5577'
+    };
+
+    /* ===== Estado global ===== */
+    let blocksMined = 0;
+    let petsGiven  = 0;
+    let isNight    = false;
+    let isScreenMode = true;     // true = TELA (vertical); false = MESA (horizontal)
+
+    /* ===== Referências DOM ===== */
+    const $world    = document.getElementById('world');
+    const $rotator  = document.getElementById('world-rotator');
+    const $blocks   = document.getElementById('blocks');
+    const $pets     = document.getElementById('pets');
+    const $toast    = document.getElementById('toast');
+    const $status   = document.getElementById('status');
+    const $marker   = document.getElementById('marker');
+    const $modeBtn  = document.getElementById('modeBtn');
+
+    /* ===== UI helpers ===== */
+    function toast(msg, dur = 1400) {
+      $toast.textContent = msg;
+      $toast.classList.add('show');
+      clearTimeout(window._tt);
+      window._tt = setTimeout(() => $toast.classList.remove('show'), dur);
+    }
+
+    function setStatus(text, found = false) {
+      $status.textContent = text;
+      $status.classList.toggle('found', found);
+    }
+
+    /* ===== Criação de blocos clicáveis ===== */
+    function makeBlock(x, y, z, type) {
+      const b = document.createElement('a-box');
+      const c = PALETTE[type] || PALETTE.grass;
+      b.setAttribute('position', `${x} ${y} ${z}`);
+      b.setAttribute('width',  BLOCK);
+      b.setAttribute('height', BLOCK);
+      b.setAttribute('depth',  BLOCK);
+      b.setAttribute('material', `color: ${c}; roughness: 0.92; metalness: 0;`);
+      b.classList.add('clickable');
+      b.dataset.type = type;
+      b.addEventListener('click', () => mineBlock(b, type));
+      return b;
+    }
+
+    function mineBlock(block, type) {
+      block.setAttribute('animation__pop',
+        'property: scale; to: 1.4 1.4 1.4; dur: 100; easing: easeOutQuad;');
+      block.setAttribute('animation__shrink',
+        'property: scale; to: 0 0 0; dur: 220; delay: 100; easing: easeInQuad;');
+
+      blocksMined++;
+      $blocks.textContent = blocksMined;
+
+      const msgs = {
+        grass:  ['+1 Grama', 'Bloco quebrado!', 'Mineração!'],
+        dirt:   ['+1 Terra', 'Cavou fundo!'],
+        wood:   ['+1 Madeira 🪵', 'Tronco!'],
+        leaves: ['+1 Folha 🍃', 'Folhagem!'],
+        stone:  ['+1 Pedra 🪨', 'Rocha sólida!'],
+        flower: ['+1 Flor 🌸', 'Pétalas!']
+      };
+      const pool = msgs[type] || ['+1 Bloco'];
+      toast(pool[Math.floor(Math.random() * pool.length)]);
+
+      setTimeout(() => block.remove(), 340);
+    }
+
+    /* ===== Geração do terreno ===== */
+    function buildTerrain() {
+      for (let i = 0; i < GRID; i++) {
+        for (let j = 0; j < GRID; j++) {
+          const x = (i - HALF) * BLOCK;
+          const z = (j - HALF) * BLOCK;
+
+          $world.appendChild(makeBlock(x, BLOCK * 0.5, z, 'dirt'));
+          $world.appendChild(makeBlock(x, BLOCK * 1.5, z, 'grass'));
+
+          if (i > 0 && i < GRID - 1 && j > 0 && j < GRID - 1 && Math.random() < 0.18) {
+            $world.appendChild(makeBlock(x, BLOCK * 2.5, z, 'grass'));
+          }
+        }
+      }
+
+      buildTree(BLOCK * 1.5, BLOCK * 2.5, -BLOCK * 1);
+      buildCow(-BLOCK * 1.4, BLOCK * 2.3, BLOCK * 1.2);
+      buildTorch(BLOCK * 1.5, BLOCK * 2.3, BLOCK * 1.5);
+      buildFlowers();
+      buildStoneCluster(-BLOCK * 1.8, BLOCK * 2.5, -BLOCK * 1.5);
+    }
+
+    function buildTree(x, baseY, z) {
+      for (let h = 0; h < 3; h++) {
+        $world.appendChild(makeBlock(x, baseY + h * BLOCK, z, 'wood'));
+      }
+      const topY = baseY + 3 * BLOCK;
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          $world.appendChild(makeBlock(x + dx * BLOCK, topY, z + dz * BLOCK, 'leaves'));
+        }
+      }
+      $world.appendChild(makeBlock(x, topY + BLOCK, z, 'leaves'));
+      $world.appendChild(makeBlock(x, topY + BLOCK * 0.5, z + BLOCK, 'leaves'));
+    }
+
+    function buildCow(x, y, z) {
+      const cow = document.createElement('a-entity');
+      cow.setAttribute('position', `${x} ${y} ${z}`);
+      cow.classList.add('clickable');
+
+      const parts = [
+        { w: 1.4, h: 0.8, d: 0.7, x: 0,    y: 0,     z: 0,   color: '#ffffff' },
+        { w: 0.5, h: 0.55, d: 0.72, x: 0.25, y: 0.05, z: 0,   color: '#1a1a1a' },
+        { w: 0.4, h: 0.45, d: 0.72, x: -0.3, y: -0.1, z: 0,   color: '#1a1a1a' },
+        { w: 0.55, h: 0.55, d: 0.55, x: 0.85, y: 0.1,  z: 0,   color: '#ffffff' },
+        { w: 0.35, h: 0.3, d: 0.3,  x: 1.1,  y: -0.05, z: 0,   color: '#f4c2c2' },
+        { w: 0.08, h: 0.12, d: 0.08, x: 0.85, y: 0.42, z: 0.15, color: '#dcd0a8' },
+        { w: 0.08, h: 0.12, d: 0.08, x: 0.85, y: 0.42, z: -0.15, color: '#dcd0a8' },
+        { w: 0.22, h: 0.5, d: 0.22, x: 0.45, y: -0.65, z: 0.22, color: '#ffffff' },
+        { w: 0.22, h: 0.5, d: 0.22, x: 0.45, y: -0.65, z: -0.22, color: '#ffffff' },
+        { w: 0.22, h: 0.5, d: 0.22, x: -0.45, y: -0.65, z: 0.22, color: '#ffffff' },
+        { w: 0.22, h: 0.5, d: 0.22, x: -0.45, y: -0.65, z: -0.22, color: '#ffffff' },
+      ];
+
+      parts.forEach(p => {
+        const box = document.createElement('a-box');
+        box.setAttribute('width',  BLOCK * p.w);
+        box.setAttribute('height', BLOCK * p.h);
+        box.setAttribute('depth',  BLOCK * p.d);
+        box.setAttribute('position', `${BLOCK * p.x} ${BLOCK * p.y} ${BLOCK * p.z}`);
+        box.setAttribute('material', `color: ${p.color}; roughness: 0.9;`);
+        cow.appendChild(box);
+      });
+
+      cow.setAttribute('animation__idle',
+        'property: rotation; from: 0 -6 0; to: 0 6 0; dur: 2200; dir: alternate; loop: true; easing: easeInOutSine;');
+
+      cow.addEventListener('click', (e) => {
+        e.stopPropagation();
+        petsGiven++;
+        $pets.textContent = petsGiven;
+
+        cow.setAttribute('animation__jump',
+          `property: position; from: ${x} ${y} ${z}; to: ${x} ${y + BLOCK * 0.5} ${z}; dur: 220; dir: alternate; loop: 2; easing: easeOutQuad;`);
+
+        const reactions = ['Muuu! 🐄', 'Carinho! ❤', 'Ela gostou!', 'Pulei alto!', 'Muuuu~'];
+        toast(reactions[Math.floor(Math.random() * reactions.length)]);
+      });
+
+      $world.appendChild(cow);
+    }
+
+    function buildTorch(x, y, z) {
+      const torch = document.createElement('a-entity');
+      torch.setAttribute('position', `${x} ${y} ${z}`);
+
+      const stick = document.createElement('a-box');
+      stick.setAttribute('width',  BLOCK * 0.15);
+      stick.setAttribute('height', BLOCK * 0.9);
+      stick.setAttribute('depth',  BLOCK * 0.15);
+      stick.setAttribute('material', 'color: #8b5a2b; roughness: 1;');
+      torch.appendChild(stick);
+
+      const flame = document.createElement('a-sphere');
+      flame.setAttribute('radius', BLOCK * 0.16);
+      flame.setAttribute('position', `0 ${BLOCK * 0.55} 0`);
+      flame.setAttribute('material',
+        'color: #ffaa33; emissive: #ff6600; emissiveIntensity: 1.2; shader: standard;');
+      flame.setAttribute('animation__flicker',
+        'property: scale; from: 1 0.9 1; to: 1.2 1.3 1.2; dir: alternate; loop: true; dur: 260; easing: easeInOutSine;');
+      torch.appendChild(flame);
+
+      const lt = document.createElement('a-light');
+      lt.setAttribute('type', 'point');
+      lt.setAttribute('color', '#ff8c1a');
+      lt.setAttribute('intensity', '1.2');
+      lt.setAttribute('distance', '1.8');
+      lt.setAttribute('position', `0 ${BLOCK * 0.55} 0`);
+      torch.appendChild(lt);
+
+      $world.appendChild(torch);
+    }
+
+    function buildFlowers() {
+      const spots = [
+        { x: -BLOCK * 0.8, z: -BLOCK * 0.5 },
+        { x:  BLOCK * 0.3, z:  BLOCK * 0.8 },
+        { x: -BLOCK * 1.6, z:  BLOCK * 0.3 }
+      ];
+      spots.forEach(s => {
+        const stem = document.createElement('a-box');
+        stem.setAttribute('width', BLOCK * 0.06);
+        stem.setAttribute('height', BLOCK * 0.18);
+        stem.setAttribute('depth', BLOCK * 0.06);
+        stem.setAttribute('position', `${s.x} ${BLOCK * 2.1} ${s.z}`);
+        stem.setAttribute('material', 'color: #3a9d3a;');
+        $world.appendChild(stem);
+
+        const petal = makeBlock(s.x, BLOCK * 2.3, s.z, 'flower');
+        petal.setAttribute('width',  BLOCK * 0.18);
+        petal.setAttribute('height', BLOCK * 0.18);
+        petal.setAttribute('depth',  BLOCK * 0.18);
+        $world.appendChild(petal);
+      });
+    }
+
+    function buildStoneCluster(x, y, z) {
+      $world.appendChild(makeBlock(x, y, z, 'stone'));
+      $world.appendChild(makeBlock(x + BLOCK, y, z, 'stone'));
+      $world.appendChild(makeBlock(x + BLOCK * 0.5, y + BLOCK, z, 'stone'));
+    }
+
+    /* ===== Reset do mundo ===== */
+    function resetWorld() {
+      while ($world.firstChild) $world.removeChild($world.firstChild);
+      blocksMined = 0;
+      petsGiven   = 0;
+      $blocks.textContent = '0';
+      $pets.textContent   = '0';
+      buildTerrain();
+      toast('Mundo reconstruído!');
+    }
+
+    /* ===== Ciclo dia/noite ===== */
+    function toggleNight() {
+      isNight = !isNight;
+      const ambient = document.getElementById('ambient');
+      const sun     = document.getElementById('sun');
+      const sphere  = document.getElementById('sun-sphere');
+      const btn     = document.getElementById('nightBtn');
+
+      if (isNight) {
+        ambient.setAttribute('color', '#3a4a7a');
+        ambient.setAttribute('intensity', '0.35');
+        sun.setAttribute('color', '#8aa0d8');
+        sun.setAttribute('intensity', '0.4');
+        sphere.setAttribute('color', '#e8edf5');
+        sphere.setAttribute('material', 'emissive: #aabbdd; emissiveIntensity: 0.9; shader: standard;');
+        btn.innerHTML = '☀ DIA';
+        toast('☾ Caiu a noite');
+      } else {
+        ambient.setAttribute('color', '#9aa7b5');
+        ambient.setAttribute('intensity', '0.65');
+        sun.setAttribute('color', '#fff5d6');
+        sun.setAttribute('intensity', '1.1');
+        sphere.setAttribute('color', '#ffe066');
+        sphere.setAttribute('material', 'emissive: #ffaa00; emissiveIntensity: 0.85; shader: standard;');
+        btn.innerHTML = '☾ NOITE';
+        toast('☀ Amanheceu');
+      }
+    }
+
+    /* ===== Alternar modo TELA / MESA =====
+       TELA: marcador exibido em monitor vertical (rotação -90° X)
+       MESA: marcador impresso/exibido em superfície horizontal (sem rotação) */
+    function toggleMode() {
+      isScreenMode = !isScreenMode;
+      if (isScreenMode) {
+        $rotator.setAttribute('rotation', '-90 0 0');
+        $modeBtn.innerHTML = '📺 TELA';
+        toast('Modo TELA (vertical)');
+      } else {
+        $rotator.setAttribute('rotation', '0 0 0');
+        $modeBtn.innerHTML = '🪑 MESA';
+        toast('Modo MESA (horizontal)');
+      }
+    }
+
+    /* ===== Modal de créditos ===== */
+    function openCredits() {
+      document.getElementById('credits-modal').classList.add('show');
+    }
+    function closeCredits() {
+      document.getElementById('credits-modal').classList.remove('show');
+    }
+
+    /* ===== Listeners ===== */
+    document.getElementById('startBtn').addEventListener('click', () => {
+      document.getElementById('welcome').classList.add('hidden');
+      setTimeout(() => document.getElementById('welcome').style.display = 'none', 600);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', resetWorld);
+    document.getElementById('nightBtn').addEventListener('click', toggleNight);
+    document.getElementById('modeBtn').addEventListener('click', toggleMode);
+    document.getElementById('group-btn').addEventListener('click', openCredits);
+    document.getElementById('closeCreditsBtn').addEventListener('click', closeCredits);
+    document.getElementById('credits-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'credits-modal') closeCredits();
+    });
+
+    /* ===== Eventos do marcador ===== */
+    $marker.addEventListener('markerFound', () => {
+      setStatus('✓ Marcador detectado', true);
+    });
+    $marker.addEventListener('markerLost', () => {
+      setStatus('⌛ Procurando marcador...', false);
+    });
+
+    /* ===== Init ===== */
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+      buildTerrain();
+    });
+  </script>
+</body>
+</html>
